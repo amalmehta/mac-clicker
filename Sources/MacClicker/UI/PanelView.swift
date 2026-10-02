@@ -97,6 +97,14 @@ struct PanelView: View {
                         .font(.system(size: 12.5))
                         .textSelection(.enabled)
                 }
+
+                if let suggested = runner.suggestion {
+                    SuggestionRow(
+                        skill: suggested,
+                        onAccept: { runner.acceptSuggestion() },
+                        onDismiss: { runner.dismissSuggestion() }
+                    )
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
@@ -279,6 +287,50 @@ struct PanelView: View {
 enum PanelMetrics {
     static let width: CGFloat = 480
     static let height: CGFloat = 440
+}
+
+/// Mentions a skill the user has never tried, once their answer has arrived.
+/// Appearing only after the useful part, and at most once a day, is what keeps this
+/// from being an advert.
+private struct SuggestionRow: View {
+    let skill: Skill
+    var onAccept: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 9) {
+            Image(systemName: skill.symbol)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 16)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Haven\u{2019}t tried \(skill.title) yet")
+                    .font(.system(size: 11.5, weight: .medium))
+                Text(skill.subtitle)
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 4)
+
+            Button("Try it", action: onAccept)
+                .controlSize(.small)
+
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16, height: 16)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Not interested")
+        }
+        .padding(9)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+    }
 }
 
 private struct ErrorCard: View {

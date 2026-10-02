@@ -1,5 +1,6 @@
 import Foundation
 import Carbon.HIToolbox
+import MacClickerKit
 
 /// A hotkey the user can pick in Settings. Carbon hotkeys are used (rather than a
 /// CGEvent tap) because they work without Accessibility permission and never
@@ -48,6 +49,36 @@ enum Settings {
         static let annotate = "showAnnotations"
         static let quietOnCalls = "quietOnCalls"
         static let keychainOwner = "keychainOwnedBySignature"
+        static let suggestionsOn = "suggestionsEnabled"
+        static let suggestionState = "suggestionState"
+        static let skillUsage = "skillUsage"
+    }
+
+    /// Whether unprompted suggestions may appear at all.
+    static var suggestionsEnabled: Bool {
+        get { flag(Key.suggestionsOn, default: true) }
+        set { defaults.set(newValue, forKey: Key.suggestionsOn) }
+    }
+
+    /// Backoff state, stored as one JSON blob rather than a scatter of keys.
+    static var suggestionState: SuggestionState {
+        get {
+            guard let data = defaults.data(forKey: Key.suggestionState),
+                  let state = try? JSONDecoder().decode(SuggestionState.self, from: data)
+            else { return SuggestionState() }
+            return state
+        }
+        set {
+            guard let data = try? JSONEncoder().encode(newValue) else { return }
+            defaults.set(data, forKey: Key.suggestionState)
+        }
+    }
+
+    /// How many times each skill has been run, so suggestions can name one the user
+    /// has never tried.
+    static var skillUsage: [String: Int] {
+        get { defaults.dictionary(forKey: Key.skillUsage) as? [String: Int] ?? [:] }
+        set { defaults.set(newValue, forKey: Key.skillUsage) }
     }
 
     /// The code signature that last took ownership of the stored key. When this

@@ -1,4 +1,5 @@
 import AppKit
+import MacClickerKit
 import SwiftUI
 
 struct SettingsView: View {
@@ -16,6 +17,8 @@ struct SettingsView: View {
     @State private var annotate = Settings.showAnnotations
     @State private var speak = Settings.speakAnnouncements
     @State private var quietOnCalls = Settings.quietOnCalls
+    @State private var suggestionsOn = Settings.suggestionsEnabled
+    @State private var restingUntil: Date?
     @State private var trusted = AccessibilityPermission.isTrusted
     @State private var screenGranted = ScreenCapturePermission.isGranted
     @State private var micGranted = Dictation.isAuthorized
@@ -126,10 +129,18 @@ struct SettingsView: View {
                     .onChange(of: speak) { _, newValue in Settings.speakAnnouncements = newValue }
                 Toggle("Stay quiet while the microphone is in use", isOn: $quietOnCalls)
                     .onChange(of: quietOnCalls) { _, newValue in Settings.quietOnCalls = newValue }
+                Toggle("Suggest skills I haven\u{2019}t tried", isOn: $suggestionsOn)
+                    .onChange(of: suggestionsOn) { _, newValue in Settings.suggestionsEnabled = newValue }
+
+                if suggestionsOn, let restingUntil {
+                    Text("Resting until \(restingUntil.formatted(date: .abbreviated, time: .shortened)) \u{2014} dismissed or ignored too often.")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("Behaviour")
             } footer: {
-                Text("Anything you explicitly ask for always runs. The quiet setting only suppresses unprompted output — during calls, huddles, and recordings.")
+                Text("Anything you explicitly ask for always runs; these settings only govern unprompted output. Suggestions appear at most once a day, after an answer rather than before it, and back off on their own if you keep dismissing or ignoring them.")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
             }
@@ -206,6 +217,7 @@ struct SettingsView: View {
         trusted = AccessibilityPermission.isTrusted
         screenGranted = ScreenCapturePermission.isGranted
         micGranted = Dictation.isAuthorized
+        restingUntil = Suggestions.nextAllowed()
     }
 
     private func saveKey() {

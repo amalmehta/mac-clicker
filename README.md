@@ -63,6 +63,7 @@ The menu bar icon (⌖) has *Explain Selection*, *Settings…*, and *Quit*.
 | Annotation overlay | `Overlay/AnnotationOverlay.swift` | Transparent per-screen windows. `sharingType = .none` keeps rings out of screenshots and screen shares; `ignoresMouseEvents` lets clicks through; a 10 Hz tracker follows moving windows. |
 | Presence | `Support/Presence.swift` | Mic-in-use via CoreAudio, as a proxy for "on a call". Gates every unprompted output. |
 | Voice | `Voice/Dictation.swift` | `SFSpeechRecognizer` with on-device recognition — speech never leaves the Mac, only the text. |
+| Suggestion backoff | `Sources/MacClickerKit/SuggestionPolicy.swift` | Decides whether an unprompted suggestion may appear. Kept free of AppKit so it is directly testable; 14 tests cover the rules. |
 
 **Model configuration:** `claude-opus-5`, adaptive thinking, effort `low` by default
 (fast and strong for explain-style work; raise it in Settings). `fallbacks: "default"` is
@@ -113,6 +114,25 @@ shows a picker instead — no other code changes.
 - **Depth** — `low` / `medium` / `high` thinking effort.
 - **Explain things for…** — free text describing your background, e.g. *"an ML engineer
   who doesn't do statistics"*. Steers the reading level of every explanation.
+- **Behaviour** — whether to draw on screen, speak status, stay quiet while the microphone
+  is live, and whether to suggest skills you haven't tried.
+
+### Suggestions, and not being annoying
+
+The app can mention a skill you have never used. It does so at most once a day, only
+*after* an answer has arrived rather than instead of one, never while your microphone is
+live, and never once you have tried everything. If you keep saying no it stops asking:
+
+| Behaviour | Response |
+|---|---|
+| Dismissed three days running | Rests five days |
+| Three offers ignored in a row | Rests one day, doubling each time, capped at a week |
+| You act on one | Every streak clears |
+
+The numbers come from what Hey Clicky settled on after twenty weeks of complaints — see
+[heyclicky-analysis.md](heyclicky-analysis.md) — which is cheaper than rediscovering them.
+The logic lives in `MacClickerKit` with no AppKit dependency, so `swift test` exercises it
+directly rather than leaving it to be found in the wild.
 
 ---
 

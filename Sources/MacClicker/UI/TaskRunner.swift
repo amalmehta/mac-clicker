@@ -1,4 +1,5 @@
 import AppKit
+import MacClickerKit
 import SwiftUI
 
 /// Drives one run of one skill: gathers only the context that skill asks for,
@@ -34,6 +35,9 @@ final class TaskRunner: ObservableObject {
     @Published private(set) var elapsed: TimeInterval?
     @Published private(set) var pointedAt: Int = 0
     @Published private(set) var usedScreenshot = false
+    /// A skill the user has never tried, offered once an answer has landed. Nil
+    /// whenever the backoff says now is not a good moment.
+    @Published private(set) var suggestion: Skill?
 
     let dictation = Dictation()
     private let overlay: AnnotationOverlay
@@ -142,6 +146,9 @@ final class TaskRunner: ObservableObject {
             return
         }
 
+        suggestion = nil
+        Suggestions.recordUse(of: skill)
+
         phase = .gathering
         let started = CACurrentMediaTime()
         lastFlush = started
@@ -169,6 +176,10 @@ final class TaskRunner: ObservableObject {
                     ? .failed("Claude returned an empty response. Try again.")
                     : .done
                 Announcer.say("Done.", unprompted: true)
+
+                // Only once the user has what they came for, and only if the
+                // backoff agrees this is a reasonable moment.
+                if self.phase == .done { self.suggestion = Suggestions.offer() }
             } catch is CancellationError {
                 return
             } catch {
@@ -179,6 +190,20 @@ final class TaskRunner: ObservableObject {
                 )
             }
         }
+    }
+
+    /// The user took the suggestion. Clears every backoff streak.
+    func acceptSuggestion() {
+        guard let suggested = suggestion else { return }
+        Suggestions.resolve(.accepted)
+        suggestion = nil
+        run(suggested)
+    }
+
+    func dismissSuggestion() {
+        guard suggestion != nil else { return }
+        Suggestions.resolve(.dismissed)
+        suggestion = nil
     }
 
     func retry() {
@@ -312,6 +337,7 @@ final class TaskRunner: ObservableObject {
         elapsed = nil
         pointedAt = 0
         usedScreenshot = false
+        suggestion = nil
         elements = []
         overlay.clear()
     }
