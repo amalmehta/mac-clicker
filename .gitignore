@@ -1,0 +1,7 @@
+# Swift Package Manager build products
+.build/
+
+# App bundle assembled by ./build.sh
+dist/
+
+.DS_Store
