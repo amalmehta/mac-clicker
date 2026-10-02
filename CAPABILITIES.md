@@ -70,8 +70,11 @@ Still unmeasured:
 - Whether it leaves connectors alone on topics the vault has nothing on. The eager
   direction is the one that costs tokens and latency for nothing, and only shows up on
   subjects the user has never written about.
-- **What's on screen** and voice dictation have not been exercised against the live API at
-  all.
+- **What's on screen** — the vision path — has not been confirmed end to end.
+
+Voice is confirmed: hotkey, on-device transcription, and an answer that used the
+transcript. The strict on-device rule means this also confirms the locale has an offline
+model; on a Mac without one the same test would correctly refuse instead.
 
 ---
 
