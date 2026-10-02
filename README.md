@@ -1,5 +1,7 @@
 # Mac Clicker
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 A menu bar widget that turns whatever your cursor is pointing at into a mini-task.
 
 Highlight a paragraph anywhere on your Mac — Preview, Chrome, Xcode, Mail — press
