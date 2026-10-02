@@ -232,3 +232,7 @@ notes do not cover. Both need ordinary use rather than a test.
 
 See [CAPABILITIES.md](CAPABILITIES.md) for what Hey Clicky can do that this can't, and why —
 including the two genuine Claude-side gaps (no audio modality, unreliable pixel grounding).
+
+## License
+
+MIT — see [LICENSE](LICENSE).
