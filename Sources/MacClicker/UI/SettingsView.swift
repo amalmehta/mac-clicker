@@ -261,7 +261,7 @@ struct SettingsView: View {
             } header: {
                 Text("Permissions")
             } footer: {
-                Text("Dictation is transcribed on this Mac. Only the resulting text is sent with your request.")
+                Text("Dictation is transcribed on this Mac, and refused outright if this Mac has no offline model for your language \u{2014} your voice is never sent somewhere else to be understood. Only the resulting text goes with your request.")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
             }

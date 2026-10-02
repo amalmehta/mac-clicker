@@ -62,7 +62,7 @@ The menu bar icon (⌖) has *Explain Selection*, *Settings…*, and *Quit*.
 | Element grounding | `Capture/AXInventory.swift` | Enumerates real on-screen elements with ids, labels, and live frames. The model names one; geometry never comes from the model. |
 | Annotation overlay | `Overlay/AnnotationOverlay.swift` | Transparent per-screen windows. `sharingType = .none` keeps rings out of screenshots and screen shares; `ignoresMouseEvents` lets clicks through; a 10 Hz tracker follows moving windows. |
 | Presence | `Support/Presence.swift` | Mic-in-use via CoreAudio, as a proxy for "on a call". Gates every unprompted output. |
-| Voice | `Voice/Dictation.swift` | `SFSpeechRecognizer` with on-device recognition — speech never leaves the Mac, only the text. |
+| Voice | `Voice/Dictation.swift` | `SFSpeechRecognizer` with `requiresOnDeviceRecognition` forced on. If this Mac has no offline model for your language, dictation is refused rather than quietly transcribed over the network. |
 | Suggestion backoff | `Sources/MacClickerKit/SuggestionPolicy.swift` | Decides whether an unprompted suggestion may appear. Kept free of AppKit so it is directly testable; 14 tests cover the rules. |
 | Connectors | `MCP/MCPClient.swift`, `MCP/MCPRegistry.swift` | Speaks MCP over stdio to servers you configure, and offers their tools to the model. |
 | Action risk | `Sources/MacClickerKit/ActionRisk.swift` | Decides which tool calls need your approval. |

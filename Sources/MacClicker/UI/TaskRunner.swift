@@ -23,6 +23,7 @@ final class TaskRunner: ObservableObject {
         case noSelection
         case noScreenRecording
         case noMicrophone
+        case noOnDeviceSpeech
     }
 
     @Published private(set) var phase: Phase = .picking
@@ -109,6 +110,14 @@ final class TaskRunner: ObservableObject {
                 return
             }
             guard self.phase == .listening else { return }
+
+            // Checked before the microphone opens, so nothing is recorded that would
+            // then have to be sent away to be understood.
+            guard self.dictation.isOnDeviceAvailable else {
+                self.phase = .blocked(.noOnDeviceSpeech)
+                return
+            }
+
             self.dictation.start()
             if let problem = self.dictation.errorMessage {
                 self.phase = .failed(problem)

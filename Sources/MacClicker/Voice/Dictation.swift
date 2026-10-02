@@ -3,13 +3,17 @@ import AVFoundation
 import Foundation
 import Speech
 
-/// Push-to-talk dictation, on-device.
+/// Push-to-talk dictation, on-device only.
 ///
-/// Uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition` so speech never
-/// leaves the Mac — only the resulting text goes to the API, alongside whatever the
-/// skill already sends. The newer `SpeechAnalyzer`/`SpeechTranscriber` API on macOS 26
-/// is better but needs per-locale model assets provisioned first; this path works
-/// everywhere the app runs.
+/// `requiresOnDeviceRecognition` is set unconditionally and listening is refused when
+/// the locale has no on-device model. Setting it to `supportsOnDeviceRecognition`
+/// instead would be the obvious thing and is a quiet trapdoor: on a machine without
+/// the model it evaluates to `false`, audio goes to Apple's servers, and the interface
+/// still says the transcription is local. A promise about where speech goes has to
+/// hold on every machine or it is not a promise.
+///
+/// The newer `SpeechAnalyzer`/`SpeechTranscriber` API on macOS 26 is better but needs
+/// per-locale assets provisioned first; this path works everywhere the app runs.
 @MainActor
 final class Dictation: ObservableObject {
 
@@ -23,6 +27,10 @@ final class Dictation: ObservableObject {
     private var task: SFSpeechRecognitionTask?
 
     var isAvailable: Bool { recognizer?.isAvailable ?? false }
+
+    /// Whether this Mac can transcribe without the network. macOS downloads the model
+    /// when Dictation is enabled for the language, so this is false until it is.
+    var isOnDeviceAvailable: Bool { recognizer?.supportsOnDeviceRecognition ?? false }
 
     // MARK: - Permissions
 
@@ -55,10 +63,16 @@ final class Dictation: ObservableObject {
             return
         }
 
+        guard recognizer.supportsOnDeviceRecognition else {
+            errorMessage = "No on-device speech model for \(Locale.current.identifier)."
+            return
+        }
+
         let request = SFSpeechAudioBufferRecognitionRequest()
         request.shouldReportPartialResults = true
-        // Keep audio on the machine when the model is installed for this locale.
-        request.requiresOnDeviceRecognition = recognizer.supportsOnDeviceRecognition
+        // Not negotiable: without the model we refuse above rather than fall back to
+        // network transcription.
+        request.requiresOnDeviceRecognition = true
         self.request = request
 
         let input = engine.inputNode

@@ -227,6 +227,10 @@ struct PanelView: View {
                         NSWorkspace.shared.open(URL(
                             string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
                         )!)
+                    case .noOnDeviceSpeech:
+                        NSWorkspace.shared.open(URL(
+                            string: "x-apple.systempreferences:com.apple.Keyboard-Settings.extension"
+                        )!)
                     }
                 }
                 .controlSize(.regular)
@@ -447,6 +451,7 @@ extension TaskRunner.Blocker {
         case .noSelection: return "text.cursor"
         case .noScreenRecording: return "rectangle.on.rectangle.slash"
         case .noMicrophone: return "mic.slash"
+        case .noOnDeviceSpeech: return "waveform.slash"
         }
     }
     var title: String {
@@ -456,6 +461,7 @@ extension TaskRunner.Blocker {
         case .noSelection: return "Nothing highlighted"
         case .noScreenRecording: return "Screen Recording access needed"
         case .noMicrophone: return "Microphone access needed"
+        case .noOnDeviceSpeech: return "No on-device speech model"
         }
     }
     var detail: String {
@@ -470,6 +476,8 @@ extension TaskRunner.Blocker {
             return "Skills that look at your screen need Screen Recording access, which macOS keeps separate from Accessibility. Allow MacClicker under Privacy & Security \u{2192} Screen Recording, then try again."
         case .noMicrophone:
             return "Asking by voice needs the microphone and speech recognition. Transcription runs on this Mac \u{2014} only the resulting text is sent."
+        case .noOnDeviceSpeech:
+            return "This Mac has no offline speech model for your language, and Mac Clicker will not send your voice to a server to work around that. Turn on Dictation for your language in Keyboard settings; macOS downloads the model, and this starts working."
         }
     }
     var actionTitle: String? {
@@ -479,6 +487,7 @@ extension TaskRunner.Blocker {
         case .noSelection: return nil
         case .noScreenRecording: return "Open Screen Recording…"
         case .noMicrophone: return "Open Microphone Settings…"
+        case .noOnDeviceSpeech: return "Open Keyboard Settings…"
         }
     }
 }
