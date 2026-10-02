@@ -33,3 +33,8 @@ RESOLVED (2026-09-03) — answers to the open questions, now the spec:
 
 Deliberately out of scope for v1 (all cheap to add later on the same skeleton):
 summarize, rewrite-and-paste-back, translate, free-form follow-up questions.
+
+Dropped, not deferred: computer use — having the app press buttons and fill
+fields in other applications. Highest liability of anything considered here,
+and a weak payoff beside the skills that do the actual work. The safety
+layer written for it is kept and tested; the actuator was never built.

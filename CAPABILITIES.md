@@ -134,7 +134,8 @@ certificate fixes it; unsigned distribution cannot.
 
 **B4. Anthropic's computer-use tool doesn't fit native macOS.** It's built around a
 screenshot-and-coordinate loop in a VM. Driving real Mac apps means writing AX actuation
-yourself (`kAXPressAction`, `kAXValueAttribute`). Replicable — just not given to you.
+yourself (`kAXPressAction`, `kAXValueAttribute`). Replicable — just not given to you. Moot
+here in any case: acting inside apps was dropped rather than deferred.
 
 ### C. Consequences of our own architecture
 
@@ -159,7 +160,7 @@ scope calls, with the estimates from `replication-plan.md`.
 | Capability | Days | Why deferred |
 |---|---|---|
 | Persistent agent personas with memory and files | 15–25 | Turns this into a different product; their own finding is that it's a UI problem, not a capability one |
-| Computer use — acting inside apps | 10–15 | Highest liability on the list. A wrong press in Mail is a different class of bug from a wrong explanation |
+| ~~Computer use — acting inside apps~~ | — | **Dropped.** Highest liability on the list, and a weak payoff beside the four skills. Its safety layer (`ActionRisk.swift`, with tests) is kept |
 | Scheduled routines | 3–5 | Needs the agent loop first |
 | MCP connectors (Gmail, Notion, Sheets) | 2–4 | Needs OAuth setup per service; nothing here to test against |
 | The notch UI | 8–15 + permanent tail | Brand, not capability. A panel at the cursor is better for reading help |

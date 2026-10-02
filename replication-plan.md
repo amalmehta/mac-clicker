@@ -251,7 +251,7 @@ the difference between a tool people keep and one they uninstall in week two.
 
 ---
 
-## Workstream 7 — Computer use on the local Mac (10–15 days, highest risk)
+## Workstream 7 — Computer use on the local Mac — DROPPED
 
 **Mechanism:** AX actuation rather than synthetic input — that's how they act "without
 moving your real pointer."
@@ -270,9 +270,16 @@ moving your real pointer."
 4. Preflight: verify the element still exists and still has the expected role/title
    immediately before acting — AX trees change under you.
 
-**Hard part:** everything about this is a liability. An agent that mis-presses in Mail or a
-banking tab is a different class of bug from a wrong explanation. If it ships, it ships
-behind an explicit allowlist of apps.
+**Dropped, deliberately.** The estimate was 10–15 days and it was the highest-liability
+item here: an agent that mis-presses in Mail or a banking tab is a different class of bug
+from a wrong explanation. Two things settled it — the cost/benefit never looked good next
+to the four skills that make up the actual product, and the actuator is genuinely dual-use
+code whose source reads the same whether it drives an accessibility assistant or a UI
+automation trojan.
+
+What survives is the safety layer, `MacClickerKit/ActionRisk.swift`: the consequential-vs-
+routine classification and the hard application blocklist, with tests. It costs nothing to
+keep and encodes the judgment that would otherwise have to be rebuilt from scratch.
 
 ---
 
@@ -333,7 +340,8 @@ polish and voice latency work that buys Mac Clicker nothing.
 | 5 | Push-to-talk voice (5) | 5–8 | On-device STT is free and private; skip the wake word |
 | 6 | MCP connectors (8) | 2–4 | Inherit an ecosystem instead of writing integrations |
 | — | Notch, wake word, speech-to-speech parity | — | Skip; brand and latency, not capability |
-| — | Agent loop, computer use, routines | 25–40 | Only if this becomes an agent product, which is a different product |
+| — | Computer use | — | **Dropped.** Highest liability on the list, weakest payoff next to the four skills |
+| — | Agent loop, routines | 25–40 | Only if this becomes an agent product, which is a different product |
 
 **Steps 1–4 are about three weeks** and produce something Hey Clicky does not currently
 ship: precise text explanation *plus* accurate on-screen pointing, with no account, no
