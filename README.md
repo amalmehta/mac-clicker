@@ -169,6 +169,16 @@ with, every time. The split is decided by `ActionRisk.swift` and is pinned by a 
 against the real tool list from `server-filesystem`: its ten readers run free, its
 `write_file`, `edit_file`, `create_directory` and `move_file` always ask.
 
+**Read-only servers.** Approval is a prompt you could click through at two in the morning;
+`"readOnly": true` on a server is a guarantee instead. Its writing tools are dropped before
+the model is told they exist, so there is nothing to approve by mistake:
+
+```json
+{ "mcpServers": { "notes": { "command": "npx", "args": ["…"], "readOnly": true } } }
+```
+
+Settings shows that server with a *read-only* badge and how many tools were withheld.
+
 A GUI app inherits a bare `PATH`, not your shell's, so the client adds the usual Homebrew,
 `/usr/local/bin` and `~/.local/bin` locations before launching a server — otherwise `npx`
 is simply not found and the failure looks like nothing at all.

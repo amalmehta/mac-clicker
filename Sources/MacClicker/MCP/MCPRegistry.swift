@@ -21,6 +21,10 @@ final class MCPRegistry: ObservableObject {
         let id: String
         var state: State
         var toolNames: [String] = []
+        /// Tools the server offers but this app will not pass on, because the
+        /// server is configured read-only.
+        var withheldToolNames: [String] = []
+        var readOnly: Bool = false
         /// Last output on the server's stderr, which is where the reason for a
         /// failure almost always is.
         var diagnostics: String = ""
@@ -73,7 +77,11 @@ final class MCPRegistry: ObservableObject {
         }
 
         statuses = configs.map { config in
-            ServerStatus(id: config.name, state: config.enabled ? .starting : .disabled)
+            ServerStatus(
+                id: config.name,
+                state: config.enabled ? .starting : .disabled,
+                readOnly: config.readOnly
+            )
         }
 
         // Started concurrently: one server fetching a package over the network
@@ -90,9 +98,17 @@ final class MCPRegistry: ObservableObject {
         do {
             try await client.start()
             clients[config.name] = client
+            let offered = client.tools.filter {
+                ActionClassifier.isOffered(
+                    label: "\($0.name) \($0.description)", readOnly: config.readOnly
+                )
+            }
+            let offeredNames = Set(offered.map(\.name))
             update(config.name) {
                 $0.state = .ready
-                $0.toolNames = client.tools.map(\.name).sorted()
+                $0.toolNames = offered.map(\.name).sorted()
+                $0.withheldToolNames = client.tools.map(\.name)
+                    .filter { !offeredNames.contains($0) }.sorted()
             }
         } catch {
             client.stop()
@@ -129,9 +145,19 @@ final class MCPRegistry: ObservableObject {
         var built: [String: AnthropicClient.Tool] = [:]
 
         for (serverName, client) in clients {
+            let readOnly = client.config.readOnly
+
             for tool in client.tools {
+                let label = "\(tool.name) \(tool.description)"
+
+                // Withheld rather than guarded: a tool the model is never shown is
+                // one it cannot be talked into calling.
+                guard ActionClassifier.isOffered(label: label, readOnly: readOnly) else {
+                    continue
+                }
+
                 let qualified = MCPToolName.qualified(server: serverName, tool: tool.name)
-                let risk = ActionClassifier.risk(label: "\(tool.name) \(tool.description)")
+                let risk = ActionClassifier.risk(label: label)
 
                 var schema = tool.inputSchema
                 if schema["type"] == nil { schema["type"] = "object" }

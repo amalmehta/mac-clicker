@@ -94,6 +94,16 @@ public enum ActionClassifier {
         return String(word.dropLast())
     }
 
+    /// Whether a tool should be offered to the model at all.
+    ///
+    /// Distinct from `risk`, which decides whether to *ask*. A read-only server
+    /// never reaches that question: the tool is withheld, so there is nothing to
+    /// approve and nothing to approve by mistake.
+    public static func isOffered(label: String, readOnly: Bool) -> Bool {
+        guard readOnly else { return true }
+        return risk(label: label) == .routine
+    }
+
     public static func isBlocked(bundleID: String?) -> Bool {
         guard let bundleID, !bundleID.isEmpty else {
             // An app we cannot identify is an app we cannot vouch for.

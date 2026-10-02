@@ -9,16 +9,21 @@ public struct MCPServerConfig: Codable, Equatable, Sendable, Identifiable {
     public let args: [String]
     public let env: [String: String]
     public let enabled: Bool
+    /// Drop every tool that could change something, before the model is told it
+    /// exists. A guarantee rather than an instruction: the model cannot ask for
+    /// what it was never offered.
+    public let readOnly: Bool
 
     public init(
         name: String, command: String, args: [String] = [],
-        env: [String: String] = [:], enabled: Bool = true
+        env: [String: String] = [:], enabled: Bool = true, readOnly: Bool = false
     ) {
         self.name = name
         self.command = command
         self.args = args
         self.env = env
         self.enabled = enabled
+        self.readOnly = readOnly
     }
 }
 
@@ -68,7 +73,8 @@ public enum MCPConfigFile {
                 args: entry["args"] as? [String] ?? [],
                 env: entry["env"] as? [String: String] ?? [:],
                 // Absent means on, so an existing config from another app just works.
-                enabled: entry["enabled"] as? Bool ?? true
+                enabled: entry["enabled"] as? Bool ?? true,
+                readOnly: entry["readOnly"] as? Bool ?? false
             )
         }
     }
@@ -79,7 +85,8 @@ public enum MCPConfigFile {
         "notes": {
           "command": "npx",
           "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/you/Notes"],
-          "enabled": true
+          "enabled": true,
+          "readOnly": true
         }
       }
     }

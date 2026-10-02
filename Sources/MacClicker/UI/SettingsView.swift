@@ -165,8 +165,22 @@ struct SettingsView: View {
                                 .foregroundStyle(status.state.tint)
                                 .font(.system(size: 10))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text(status.id).font(.system(size: 11.5, weight: .medium))
-                                Text(status.state.caption(toolCount: status.toolNames.count))
+                                HStack(spacing: 5) {
+                                    Text(status.id).font(.system(size: 11.5, weight: .medium))
+                                    if status.readOnly {
+                                        Text("read-only")
+                                            .font(.system(size: 9))
+                                            .padding(.horizontal, 4)
+                                            .padding(.vertical, 1)
+                                            .background(
+                                                Capsule().fill(Color.secondary.opacity(0.18))
+                                            )
+                                    }
+                                }
+                                Text(status.state.caption(
+                                    toolCount: status.toolNames.count,
+                                    withheld: status.withheldToolNames.count
+                                ))
                                     .font(.system(size: 10.5))
                                     .foregroundStyle(.secondary)
                                     .fixedSize(horizontal: false, vertical: true)
@@ -196,7 +210,7 @@ struct SettingsView: View {
             } header: {
                 Text("Connectors (MCP)")
             } footer: {
-                Text("Tools that only read run as part of an answer. Anything that would change something is shown to you for approval first, every time.")
+                Text("Tools that only read run as part of an answer. Anything that would change something is shown to you for approval first, every time. Set \"readOnly\": true on a server to withhold its writing tools altogether, so there is nothing to approve by mistake.")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
             }
@@ -304,9 +318,11 @@ private extension MCPRegistry.State {
         case .failed: return .orange
         }
     }
-    func caption(toolCount: Int) -> String {
+    func caption(toolCount: Int, withheld: Int) -> String {
         switch self {
-        case .ready: return "\(toolCount) tool\(toolCount == 1 ? "" : "s")"
+        case .ready:
+            let base = "\(toolCount) tool\(toolCount == 1 ? "" : "s")"
+            return withheld == 0 ? base : base + ", \(withheld) withheld"
         case .starting: return "starting…"
         case .disabled: return "disabled in the config"
         case .failed(let reason): return reason

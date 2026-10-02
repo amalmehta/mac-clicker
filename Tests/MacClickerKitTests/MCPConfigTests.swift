@@ -50,6 +50,18 @@ final class MCPConfigTests: XCTestCase {
         }
     }
 
+    func testReadOnlyDefaultsToOffAndParsesWhenPresent() throws {
+        let plain = try parse("""
+        {"mcpServers": {"x": {"command": "c"}}}
+        """)
+        XCTAssertFalse(plain[0].readOnly, "an existing config must keep working unchanged")
+
+        let locked = try parse("""
+        {"mcpServers": {"x": {"command": "c", "readOnly": true}}}
+        """)
+        XCTAssertTrue(locked[0].readOnly)
+    }
+
     func testTheBundledExampleIsValid() throws {
         let servers = try MCPConfigFile.parse(Data(MCPConfigFile.example.utf8))
         XCTAssertEqual(servers.count, 1)

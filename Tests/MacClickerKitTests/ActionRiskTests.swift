@@ -122,6 +122,33 @@ final class ActionRiskTests: XCTestCase {
         }
     }
 
+    // MARK: - Withholding tools entirely
+
+    func testReadOnlyDropsEverythingThatWrites() {
+        let readers = [
+            "read_file", "read_text_file", "read_media_file", "read_multiple_files",
+            "list_directory", "list_directory_with_sizes", "directory_tree",
+            "search_files", "get_file_info", "list_allowed_directories"
+        ]
+        let writers = ["write_file", "edit_file", "create_directory", "move_file"]
+
+        for tool in readers {
+            XCTAssertTrue(ActionClassifier.isOffered(label: tool, readOnly: true), tool)
+        }
+        for tool in writers {
+            XCTAssertFalse(
+                ActionClassifier.isOffered(label: tool, readOnly: true),
+                "\(tool) must never be offered by a read-only server"
+            )
+        }
+    }
+
+    func testWithoutTheFlagEverythingIsStillOffered() {
+        for tool in ["write_file", "move_file", "read_file"] {
+            XCTAssertTrue(ActionClassifier.isOffered(label: tool, readOnly: false), tool)
+        }
+    }
+
     // MARK: - Blocked applications
 
     func testSensitiveAppsAreBlocked() {

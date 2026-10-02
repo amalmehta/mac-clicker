@@ -51,7 +51,14 @@ extension Skill {
     /// present, so the prompt never describes tools that do not exist.
     static let connectorGuidance = """
 
-    You also have tools from services the user has connected themselves. Use one only     when the answer genuinely depends on something you cannot see in front of you —     their own notes, files, or records. Do not go looking out of curiosity, do not     announce that you are searching, and if a lookup comes back empty just answer     without it. A tool that changes anything will be shown to the user for approval     before it runs, so prefer the one that reads over the one that writes.
+    You also have tools from services the user has connected themselves. Use one only
+    when the answer genuinely depends on something you cannot see in front of you: their
+    own notes, files, or records. Do not go looking out of curiosity, do not announce
+    that you are searching, and if a lookup comes back empty just answer without it.
+
+    A tool that changes anything is shown to the user for approval before it runs, and
+    some servers are limited to reading only. Work with the tools you are actually given
+    rather than describing one that is not there.
     """
 
     // MARK: - Explain highlighted text
