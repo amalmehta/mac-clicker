@@ -179,6 +179,11 @@ the model is told they exist, so there is nothing to approve by mistake:
 
 Settings shows that server with a *read-only* badge and how many tools were withheld.
 
+**Seeing it happen.** The panel footer reports what a run actually used —
+`claude-opus-5 · 3.2s · screen · 2 lookups` — and hovering it names the tools. Without
+that, a silent lookup is indistinguishable from no lookup, and the only way to tell whether
+a connector is earning its place is to guess from the wording of the answer.
+
 A GUI app inherits a bare `PATH`, not your shell's, so the client adds the usual Homebrew,
 `/usr/local/bin` and `~/.local/bin` locations before launching a server — otherwise `npx`
 is simply not found and the failure looks like nothing at all.

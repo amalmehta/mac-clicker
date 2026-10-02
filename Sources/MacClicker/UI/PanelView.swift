@@ -268,6 +268,9 @@ struct PanelView: View {
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .help(runner.lookups.isEmpty
+                          ? "No connector tools were used."
+                          : "Connectors used:\n" + runner.lookups.joined(separator: "\n"))
                 Spacer()
                 if case .done = runner.phase {
                     Button("Copy") { runner.copyOutput() }.controlSize(.small)
@@ -288,6 +291,10 @@ struct PanelView: View {
             if runner.usedScreenshot { line += " · screen" }
             if runner.pointedAt > 0 {
                 line += " · \(runner.pointedAt) ring\(runner.pointedAt == 1 ? "" : "s")"
+            }
+            if !runner.lookups.isEmpty {
+                let count = runner.lookups.count
+                line += " · \(count) lookup\(count == 1 ? "" : "s")"
             }
             return line
         }

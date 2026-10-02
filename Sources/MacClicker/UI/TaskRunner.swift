@@ -35,6 +35,8 @@ final class TaskRunner: ObservableObject {
     @Published private(set) var elapsed: TimeInterval?
     @Published private(set) var pointedAt: Int = 0
     @Published private(set) var usedScreenshot = false
+    /// Connector tools called during this run, in order, as "server/tool".
+    @Published private(set) var lookups: [String] = []
     /// A skill the user has never tried, offered once an answer has landed. Nil
     /// whenever the backoff says now is not a good moment.
     @Published private(set) var suggestion: Skill?
@@ -166,6 +168,7 @@ final class TaskRunner: ObservableObject {
         elapsed = nil
         pointedAt = 0
         usedScreenshot = false
+        lookups = []
         overlay.clear()
 
         if skill.requiresSelection, selection.isEmpty {
@@ -195,9 +198,12 @@ final class TaskRunner: ObservableObject {
                 var tools: [String: AnthropicClient.Tool] = [:]
                 if skill.canPoint { tools[Self.pointToolName] = self.pointTool() }
                 if skill.usesConnectors {
-                    let connectorTools = self.registry.tools { summary, detail in
-                        await self.askConsent(summary: summary, detail: detail)
-                    }
+                    let connectorTools = self.registry.tools(
+                        consent: { summary, detail in
+                            await self.askConsent(summary: summary, detail: detail)
+                        },
+                        didCall: { [weak self] name in self?.lookups.append(name) }
+                    )
                     tools.merge(connectorTools) { existing, _ in existing }
                 }
 
@@ -388,6 +394,7 @@ final class TaskRunner: ObservableObject {
         elapsed = nil
         pointedAt = 0
         usedScreenshot = false
+        lookups = []
         suggestion = nil
         elements = []
         overlay.clear()

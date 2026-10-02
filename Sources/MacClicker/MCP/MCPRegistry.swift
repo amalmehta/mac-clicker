@@ -139,7 +139,8 @@ final class MCPRegistry: ObservableObject {
     /// only read run freely — being asked to approve a note lookup three times in one
     /// answer is how people learn to approve without reading.
     func tools(
-        consent: @escaping (_ summary: String, _ detail: String) async -> Bool
+        consent: @escaping (_ summary: String, _ detail: String) async -> Bool,
+        didCall: @escaping (_ toolName: String) -> Void = { _ in }
     ) -> [String: AnthropicClient.Tool] {
 
         var built: [String: AnthropicClient.Tool] = [:]
@@ -184,6 +185,11 @@ final class MCPRegistry: ObservableObject {
                                 return "The user declined to run this. Do not try it again; carry on without it or explain what you would have done."
                             }
                         }
+
+                        // Reported here rather than on success: a lookup that
+                        // failed still happened, and hiding it would make the
+                        // indicator lie about what the model did.
+                        didCall("\(serverName)/\(tool.name)")
 
                         do {
                             return try await client.call(tool.name, arguments: arguments)
