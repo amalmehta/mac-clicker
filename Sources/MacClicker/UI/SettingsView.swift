@@ -8,6 +8,8 @@ struct SettingsView: View {
     /// Draws the alignment test rings.
     var onCheckAlignment: () -> Void
     @ObservedObject var registry: MCPRegistry
+    @ObservedObject var health: AppHealth
+    var onRetryShortcuts: () -> Void
 
     @State private var apiKeyField = ""
     @State private var hasStoredKey = Keychain.hasStoredItem
@@ -19,6 +21,7 @@ struct SettingsView: View {
     @State private var speak = Settings.speakAnnouncements
     @State private var quietOnCalls = Settings.quietOnCalls
     @State private var suggestionsOn = Settings.suggestionsEnabled
+    @State private var keepOpen = Settings.keepPanelOpen
     @State private var restingUntil: Date?
     @State private var trusted = AccessibilityPermission.isTrusted
     @State private var screenGranted = ScreenCapturePermission.isGranted
@@ -100,6 +103,22 @@ struct SettingsView: View {
                     onHotKeysChanged()
                 }
 
+                HStack(spacing: 6) {
+                    Image(systemName: health.mainHotKeyLive && health.voiceHotKeyLive
+                          ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                        .foregroundStyle(health.mainHotKeyLive && health.voiceHotKeyLive
+                                         ? .green : .orange)
+                        .font(.system(size: 10))
+                    Text(shortcutStatus)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer()
+                    if !(health.mainHotKeyLive && health.voiceHotKeyLive) {
+                        Button("Retry", action: onRetryShortcuts).controlSize(.small)
+                    }
+                }
+
                 if hotKey.id == voiceHotKey.id {
                     Label("Both shortcuts are the same — only the panel will open.",
                           systemImage: "exclamationmark.triangle.fill")
@@ -130,6 +149,8 @@ struct SettingsView: View {
                     .onChange(of: speak) { _, newValue in Settings.speakAnnouncements = newValue }
                 Toggle("Stay quiet while the microphone is in use", isOn: $quietOnCalls)
                     .onChange(of: quietOnCalls) { _, newValue in Settings.quietOnCalls = newValue }
+                Toggle("Keep the panel open until I dismiss it", isOn: $keepOpen)
+                    .onChange(of: keepOpen) { _, newValue in Settings.keepPanelOpen = newValue }
                 Toggle("Suggest skills I haven\u{2019}t tried", isOn: $suggestionsOn)
                     .onChange(of: suggestionsOn) { _, newValue in Settings.suggestionsEnabled = newValue }
 
@@ -186,6 +207,20 @@ struct SettingsView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                             Spacer()
+                            if case .failed = status.state {
+                                Button("Restart") {
+                                    Task { await registry.restart(status.id) }
+                                }
+                                .controlSize(.small)
+                            }
+                        }
+                        if !status.diagnostics.isEmpty, case .failed = status.state {
+                            Text(status.diagnostics.suffix(300))
+                                .font(.system(size: 9.5, design: .monospaced))
+                                .foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                                .lineLimit(4)
+                                .padding(.leading, 16)
                         }
                     }
                 }
@@ -221,6 +256,18 @@ struct SettingsView: View {
                         .controlSize(.small)
                     Spacer()
                 }
+                HStack(spacing: 6) {
+                    Button("Copy diagnostics") { health.copySummary(registry: registry) }
+                        .controlSize(.small)
+                    Spacer()
+                }
+                Text("Puts the app\u{2019}s whole state on the clipboard \u{2014} shortcuts, permissions, connectors and their errors \u{2014} so a problem can be described without guessing at it.")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Divider().padding(.vertical, 2)
+
                 Text("Draws a ring 100pt inside every edge of each screen for ten seconds. Equal gaps on all four sides means the geometry is right; an uneven gap is the error, and which screen shows it says where it comes from.")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -271,6 +318,15 @@ struct SettingsView: View {
         .onAppear(perform: refresh)
     }
 
+    private var shortcutStatus: String {
+        switch (health.mainHotKeyLive, health.voiceHotKeyLive) {
+        case (true, true): return "Both shortcuts are active."
+        case (false, false): return "Neither shortcut registered \u{2014} another app may hold them. Use the menu bar meanwhile."
+        case (false, true): return "The panel shortcut didn\u{2019}t register. Use the menu bar, or pick a different one."
+        case (true, false): return "The voice shortcut didn\u{2019}t register. Pick a different one."
+        }
+    }
+
     private func permissionRow(granted: Bool, label: String, action: @escaping () -> Void) -> some View {
         HStack(spacing: 6) {
             Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
@@ -288,6 +344,8 @@ struct SettingsView: View {
         screenGranted = ScreenCapturePermission.isGranted
         micGranted = Dictation.isAuthorized
         restingUntil = Suggestions.nextAllowed()
+        // Opening Settings is exactly when someone wants the truth about the servers.
+        registry.pruneDeadServers()
     }
 
     private func saveKey() {
@@ -336,6 +394,8 @@ final class SettingsWindowController {
     var onHotKeysChanged: (() -> Void)?
     var onCheckAlignment: (() -> Void)?
     var registry: MCPRegistry?
+    var health: AppHealth?
+    var onRetryShortcuts: (() -> Void)?
 
     func show() {
         if let window {
@@ -347,7 +407,9 @@ final class SettingsWindowController {
         let view = SettingsView(
             onHotKeysChanged: { [weak self] in self?.onHotKeysChanged?() },
             onCheckAlignment: { [weak self] in self?.onCheckAlignment?() },
-            registry: registry ?? MCPRegistry()
+            registry: registry ?? MCPRegistry(),
+            health: health ?? AppHealth(),
+            onRetryShortcuts: { [weak self] in self?.onRetryShortcuts?() }
         )
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 470, height: 660),

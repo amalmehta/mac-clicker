@@ -6,6 +6,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let mainHotKey = HotKeyManager()
     private let voiceHotKey = HotKeyManager()
     private let registry = MCPRegistry()
+    /// Whether each shortcut is actually claimed. A shortcut the system refused is
+    /// worse than none at all if the menu keeps advertising it.
+    private let health = AppHealth()
+    private var mainHotKeyLive = false { didSet { health.mainHotKeyLive = mainHotKeyLive } }
+    private var voiceHotKeyLive = false { didSet { health.voiceHotKeyLive = voiceHotKeyLive } }
     private lazy var panel = PanelController(registry: registry)
     private let settings = SettingsWindowController()
 
@@ -17,9 +22,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildStatusItem()
         registerHotKeys(announceFailures: false)
 
+        // A shortcut is most often refused because the previous instance has not
+        // finished exiting. Retrying beats telling the user their shortcut is taken
+        // when it will be free in half a second.
+        if !mainHotKeyLive || !voiceHotKeyLive {
+            Task { @MainActor in
+                for delay in [0.5, 1.5, 3.0] {
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                    registerHotKeys(announceFailures: false)
+                    if mainHotKeyLive, voiceHotKeyLive { return }
+                }
+            }
+        }
+
         reclaimKeychainIfSignatureChanged()
 
         settings.registry = registry
+        settings.health = health
+        settings.onRetryShortcuts = { [weak self] in self?.registerHotKeys(announceFailures: true) }
         // Servers start in the background: a config that fetches a package should
         // not hold up the menu bar icon appearing.
         Task { await registry.reload() }
@@ -85,6 +105,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         voice.image = NSImage(systemSymbolName: "mic", accessibilityDescription: nil)
         menu.addItem(voice)
 
+        let retry = NSMenuItem(
+            title: "Retry Shortcuts", action: #selector(retryShortcuts), keyEquivalent: ""
+        )
+        retry.target = self
+        retry.image = NSImage(systemSymbolName: "arrow.clockwise", accessibilityDescription: nil)
+        retry.isHidden = true
+        menu.addItem(retry)
+
         menu.addItem(.separator())
 
         let settingsItem = NSMenuItem(title: "Settings…", action: #selector(openSettings), keyEquivalent: ",")
@@ -101,15 +129,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Keeps the menu labels in sync with whichever hotkeys are configured.
     private func refreshShortcutHints() {
         guard let items = statusItem?.menu?.items else { return }
-        let picker = Settings.hotKey.label
+
         for (index, skill) in Skill.all.enumerated() where index < items.count {
-            // The first entry is what the main hotkey lands on, so label it.
             items[index].title = index == 0
-                ? "\(skill.title)  (\(picker))"
+                ? "\(skill.title)\(hint(Settings.hotKey.label, live: mainHotKeyLive))"
                 : skill.title
         }
         items.first { $0.action == #selector(askByVoice) }?
-            .title = "Ask by Voice  (\(Settings.voiceHotKey.label))"
+            .title = "Ask by Voice\(hint(Settings.voiceHotKey.label, live: voiceHotKeyLive))"
+
+        // A visible repair, rather than a shortcut that quietly does nothing.
+        let retry = items.first { $0.action == #selector(retryShortcuts) }
+        retry?.isHidden = mainHotKeyLive && voiceHotKeyLive
+
+        statusItem?.button?.image = NSImage(
+            systemSymbolName: needsAttention ? "exclamationmark.triangle" : "cursorarrow.rays",
+            accessibilityDescription: needsAttention ? "Mac Clicker needs attention" : "Mac Clicker"
+        )
+        statusItem?.button?.image?.isTemplate = true
+    }
+
+    private func hint(_ label: String, live: Bool) -> String {
+        live ? "  (\(label))" : "  (shortcut unavailable)"
+    }
+
+    /// Anything that stops the app working, worth showing on the menu bar icon.
+    private var needsAttention: Bool {
+        !mainHotKeyLive
+            || !AccessibilityPermission.isTrusted
+            || !Keychain.hasStoredItem
+    }
+
+    @objc private func retryShortcuts() {
+        registerHotKeys(announceFailures: true)
     }
 
     // MARK: - Actions
@@ -127,18 +179,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         var taken: [String] = []
 
         let main = Settings.hotKey
-        if !mainHotKey.register(preset: main, onPress: { [weak self] in self?.panel.toggle() }) {
-            taken.append(main.label)
-        }
+        mainHotKeyLive = mainHotKey.register(preset: main, onPress: { [weak self] in
+            self?.panel.toggle()
+        })
+        if !mainHotKeyLive { taken.append(main.label) }
 
         let voice = Settings.voiceHotKey
         if voice.id == main.id {
+            voiceHotKeyLive = false
             taken.append("\(voice.label) (used twice)")
-        } else if !voiceHotKey.register(preset: voice, onPress: { [weak self] in self?.panel.toggleVoice() }) {
-            taken.append(voice.label)
+        } else {
+            voiceHotKeyLive = voiceHotKey.register(preset: voice, onPress: { [weak self] in
+                self?.panel.toggleVoice()
+            })
+            if !voiceHotKeyLive { taken.append(voice.label) }
         }
 
         refreshShortcutHints()
+
+        health.lastHotKeyError = taken.isEmpty ? nil : "unavailable: \(taken.joined(separator: ", "))"
 
         guard announceFailures, !taken.isEmpty else { return }
         let alert = NSAlert()

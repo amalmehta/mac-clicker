@@ -49,9 +49,18 @@ enum Settings {
         static let annotate = "showAnnotations"
         static let quietOnCalls = "quietOnCalls"
         static let keychainOwner = "keychainOwnedBySignature"
+        static let pinPanel = "keepPanelOpen"
         static let suggestionsOn = "suggestionsEnabled"
         static let suggestionState = "suggestionState"
         static let skillUsage = "skillUsage"
+    }
+
+    /// Keep the panel open until it is explicitly dismissed, instead of closing as
+    /// soon as focus moves elsewhere. Needed to screenshot an answer, to copy from
+    /// it in another app, or to keep it beside what you are reading.
+    static var keepPanelOpen: Bool {
+        get { flag(Key.pinPanel, default: false) }
+        set { defaults.set(newValue, forKey: Key.pinPanel) }
     }
 
     /// Whether unprompted suggestions may appear at all.

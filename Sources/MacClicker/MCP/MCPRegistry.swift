@@ -34,6 +34,8 @@ final class MCPRegistry: ObservableObject {
     @Published private(set) var configProblem: String?
 
     private var clients: [String: MCPClient] = [:]
+    /// Kept so a server that died can be started again without re-reading the file.
+    private var configs: [String: MCPServerConfig] = [:]
 
     static var configURL: URL {
         let support = FileManager.default.urls(
@@ -75,6 +77,8 @@ final class MCPRegistry: ObservableObject {
                 ?? error.localizedDescription
             return
         }
+
+        self.configs = Dictionary(uniqueKeysWithValues: configs.map { ($0.name, $0) })
 
         statuses = configs.map { config in
             ServerStatus(
@@ -126,6 +130,39 @@ final class MCPRegistry: ObservableObject {
         clients = [:]
     }
 
+    /// Starts one server again after it died or was stopped.
+    func restart(_ name: String) async {
+        guard let config = configs[name] else { return }
+        clients[name]?.stop()
+        clients[name] = nil
+        update(name) { $0.state = .starting; $0.toolNames = []; $0.withheldToolNames = [] }
+        await start(config)
+    }
+
+    /// Notices servers whose process has exited.
+    ///
+    /// An MCP server is an ordinary child process and can crash, be killed, or exit
+    /// when whatever it talks to goes away. Without this it stays in the list looking
+    /// healthy while contributing nothing, and the only symptom is answers quietly
+    /// getting worse.
+    @discardableResult
+    func pruneDeadServers() -> [String] {
+        var died: [String] = []
+        for (name, client) in clients where !client.isRunning {
+            let diagnostics = client.stderrTail
+            client.stop()
+            clients[name] = nil
+            died.append(name)
+            update(name) {
+                $0.state = .failed("The server stopped running.")
+                $0.toolNames = []
+                $0.withheldToolNames = []
+                $0.diagnostics = diagnostics
+            }
+        }
+        return died
+    }
+
     private func update(_ name: String, _ change: (inout ServerStatus) -> Void) {
         guard let index = statuses.firstIndex(where: { $0.id == name }) else { return }
         change(&statuses[index])
@@ -144,6 +181,10 @@ final class MCPRegistry: ObservableObject {
     ) -> [String: AnthropicClient.Tool] {
 
         var built: [String: AnthropicClient.Tool] = [:]
+
+        // Checked here rather than on a timer: this is the moment it matters, and a
+        // dead server should not be advertised to the model as if it worked.
+        pruneDeadServers()
 
         for (serverName, client) in clients {
             let readOnly = client.config.readOnly

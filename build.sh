@@ -73,7 +73,15 @@ fi
 
 if [[ "${1:-}" == "--install" ]]; then
     echo "→ installing to /Applications"
-    pkill -x "$APP_NAME" 2>/dev/null || true
+    # Wait for it to actually exit. Launching while the old process is still dying
+    # means the new one cannot claim the global hotkey, and loses it silently.
+    if pkill -x "$APP_NAME" 2>/dev/null; then
+        for _ in $(seq 1 50); do
+            pgrep -x "$APP_NAME" >/dev/null || break
+            sleep 0.1
+        done
+        pgrep -x "$APP_NAME" >/dev/null && echo "   ! old instance still running; the shortcut may not register"
+    fi
     rm -rf "/Applications/${APP_NAME}.app"
     cp -R "$APP" /Applications/
     open "/Applications/${APP_NAME}.app"

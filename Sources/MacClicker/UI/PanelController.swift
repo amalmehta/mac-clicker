@@ -151,9 +151,11 @@ final class PanelController: NSObject, NSWindowDelegate {
         }
     }
 
-    // Clicking away dismisses, the way a spotlight-style panel should. Rings are
-    // cleared with it, so nothing is left drawn over the screen.
+    // Clicking away dismisses, the way a spotlight-style panel should — unless the
+    // user has pinned it. Auto-closing also makes an answer impossible to screenshot
+    // or to read beside another window, which is why the pin exists.
     func windowDidResignKey(_ notification: Notification) {
+        guard !Settings.keepPanelOpen else { return }
         close()
     }
 }

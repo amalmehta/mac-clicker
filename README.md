@@ -192,7 +192,18 @@ is simply not found and the failure looks like nothing at all.
 
 ## Troubleshooting
 
-**Nothing happens on the hotkey.** Check the menu bar icon is there and Accessibility is
+**Something is wrong and you don't know what.** Settings → Troubleshooting →
+**Copy diagnostics** puts the whole state on the clipboard: which shortcuts actually
+registered, every permission, whether a key is stored, and each connector with its error
+output. The menu bar icon turns into a warning triangle when any of that needs attention.
+
+**Nothing happens on the hotkey.** The menu item will say *shortcut unavailable* rather
+than advertising a key that does nothing, and a **Retry Shortcuts** item appears. The usual
+cause is another app holding the combination; registration is also retried automatically a
+few times at launch, since the commonest case is the previous instance not having finished
+exiting.
+
+**Nothing happens on the hotkey (older causes).** Check the menu bar icon is there and Accessibility is
 granted (Settings → Permissions shows the live status). Then check the shortcut isn't
 taken by Alfred/Raycast/Spotlight.
 
