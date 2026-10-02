@@ -218,18 +218,17 @@ identity above.
 
 ---
 
-## Not yet verified
+## Verified
 
-The build compiles clean and the app launches, but nothing here has made a live request —
-there was no API key available in this environment. Two things specifically need a real run:
+All four skills have been run end to end against the live API, on a two-display setup
+(built-in Retina 2×, external 1080p 1×): text explanation, screen reading, on-screen
+pointing with rings landing on target, and a spoken question answered from on-device
+transcription. Connectors confirmed against a real Obsidian vault through a read-only
+filesystem server.
 
-1. Whether rings land exactly on their targets (the AX→Cocoa coordinate flip, on your
-   display layout).
-2. Whether Claude reliably picks valid element ids. Invalid ones get a corrective tool
-   result so it can recover, but the rate is unmeasured.
-
-Any request problem surfaces as a readable error card in the panel rather than a silent
-failure.
+What is still unmeasured is rate rather than function — how often the model names an
+element id that is not in the list, and whether it leaves connectors alone on subjects the
+notes do not cover. Both need ordinary use rather than a test.
 
 See [CAPABILITIES.md](CAPABILITIES.md) for what Hey Clicky can do that this can't, and why —
 including the two genuine Claude-side gaps (no audio modality, unreliable pixel grounding).

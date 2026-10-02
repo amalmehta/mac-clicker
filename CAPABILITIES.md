@@ -70,11 +70,17 @@ Still unmeasured:
 - Whether it leaves connectors alone on topics the vault has nothing on. The eager
   direction is the one that costs tokens and latency for nothing, and only shows up on
   subjects the user has never written about.
-- **What's on screen** — the vision path — has not been confirmed end to end.
+All four skills are now confirmed end to end against the live API: Explain this, What's on
+screen, Show me how, and Ask about this by voice. Voice also confirms the strict
+on-device rule in the passing direction — it listened rather than refusing, so this Mac has
+the offline model that rule requires.
 
-Voice is confirmed: hotkey, on-device transcription, and an answer that used the
-transcript. The strict on-device rule means this also confirms the locale has an offline
-model; on a Mac without one the same test would correctly refuse instead.
+What remains unmeasured is rate, not function, and single tests cannot settle it:
+
+- How often Claude names an element id that is not in the list. Invalid ids get a
+  corrective tool result so it recovers, but the frequency is unknown.
+- Whether connectors are left alone on subjects the vault has nothing on. The eager
+  direction costs tokens and latency for nothing and only shows up over ordinary use.
 
 ---
 
