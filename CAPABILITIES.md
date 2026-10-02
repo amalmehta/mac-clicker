@@ -58,8 +58,20 @@ Both are invisible until something is drawn at absolute screen coordinates, and 
 produces an error. Settings → Troubleshooting → **Check ring alignment** draws a ring 100pt
 inside each screen edge, which turns "slightly off" into a number.
 
-Still unmeasured: how reliably Claude picks valid element ids from the list. Invalid ids get
-a corrective tool result so it can recover, but the rate is unknown.
+Connectors are confirmed working too: a read-only filesystem server over a real Obsidian
+vault, two lookups on one answer, and the answer visibly drew on the notes. The footer's
+lookup count is what made that legible — a silent read-only lookup is otherwise
+indistinguishable from no lookup at all.
+
+Still unmeasured:
+
+- How reliably Claude picks valid element ids from the list. Invalid ids get a corrective
+  tool result so it can recover, but the rate is unknown.
+- Whether it leaves connectors alone on topics the vault has nothing on. The eager
+  direction is the one that costs tokens and latency for nothing, and only shows up on
+  subjects the user has never written about.
+- **What's on screen** and voice dictation have not been exercised against the live API at
+  all.
 
 ---
 
