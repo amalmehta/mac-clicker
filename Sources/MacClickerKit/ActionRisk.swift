@@ -29,7 +29,19 @@ public enum ActionClassifier {
         "transfer", "withdraw", "deposit", "confirm", "agree", "accept", "sign",
         "install", "uninstall", "restart", "shutdown", "logout", "quit", "format",
         "reset", "revoke", "deactivate", "archive", "block", "report", "merge",
-        "push", "deploy", "release", "approve", "overwrite", "replace", "move"
+        "push", "deploy", "release", "approve", "overwrite", "replace", "move",
+        // Verbs that show up in tool names rather than on buttons. A tool is named
+        // by its author, not by a UI designer, so the vocabulary is different.
+        "write", "create", "edit", "update", "modify", "rename", "insert", "append",
+        "upload", "commit", "execute", "run", "patch", "drop", "truncate", "kill",
+        "revert", "restore", "clear", "purge", "disable", "enable", "grant"
+    ]
+
+    /// Verbs that only look. Their presence means a stemmed match elsewhere in the
+    /// label is probably a noun — `get_posts` reads posts, it does not post.
+    public static let readOnlyTerms: Set<String> = [
+        "get", "list", "read", "search", "fetch", "query", "find", "show", "view",
+        "describe", "count", "inspect", "lookup", "browse", "preview", "check"
     ]
 
     /// Applications this never acts in, whatever the user has allowed.
@@ -52,13 +64,34 @@ public enum ActionClassifier {
         "com.amalmehta.MacClicker"
     ]
 
+    /// `label` is a button title, or a tool name and its description. Tool names use
+    /// a different vocabulary from buttons — `write_file`, `create_issue` — so both
+    /// sets of terms are checked against whatever is supplied.
     public static func risk(label: String, role: String = "") -> ActionRisk {
         let words = tokens(in: label)
+
+        // An exact match settles it, whatever else the label says: "get_and_delete"
+        // still deletes.
         if !words.isDisjoint(with: consequentialTerms) { return .consequential }
 
-        // A control that opens a menu is harmless; the item chosen from it is what
-        // gets classified when the model asks for it.
+        // Descriptions are written in the third person — "deletes local copies" —
+        // so a light stem is needed to see them. But stemming alone would read
+        // `get_posts` as posting, so it only counts when nothing in the label says
+        // this merely looks at something.
+        let stemmed = Set(words.map(stem))
+        if !stemmed.isDisjoint(with: consequentialTerms),
+           words.isDisjoint(with: readOnlyTerms) {
+            return .consequential
+        }
+
         return .routine
+    }
+
+    /// Just enough to turn "deletes" into "delete". Not a real stemmer, and should
+    /// not become one: every rule added here is a new way to be wrong.
+    private static func stem(_ word: String) -> String {
+        guard word.count > 3, word.hasSuffix("s"), !word.hasSuffix("ss") else { return word }
+        return String(word.dropLast())
     }
 
     public static func isBlocked(bundleID: String?) -> Bool {

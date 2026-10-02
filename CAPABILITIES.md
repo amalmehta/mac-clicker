@@ -162,7 +162,7 @@ scope calls, with the estimates from `replication-plan.md`.
 | Persistent agent personas with memory and files | 15–25 | Turns this into a different product; their own finding is that it's a UI problem, not a capability one |
 | ~~Computer use — acting inside apps~~ | — | **Dropped.** Highest liability on the list, and a weak payoff beside the four skills. Its safety layer (`ActionRisk.swift`, with tests) is kept |
 | Scheduled routines | 3–5 | Needs the agent loop first |
-| MCP connectors (Gmail, Notion, Sheets) | 2–4 | Needs OAuth setup per service; nothing here to test against |
+| ~~MCP connectors~~ | — | **Built.** stdio client, server registry, approval gate on anything that writes |
 | The notch UI | 8–15 + permanent tail | Brand, not capability. A panel at the cursor is better for reading help |
 | Proactive morning suggestions | 5–8 | Needs C1 and A4 first; the etiquette backoff it depends on *is* built |
 

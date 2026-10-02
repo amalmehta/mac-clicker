@@ -7,6 +7,7 @@ struct SettingsView: View {
     var onHotKeysChanged: () -> Void
     /// Draws the alignment test rings.
     var onCheckAlignment: () -> Void
+    @ObservedObject var registry: MCPRegistry
 
     @State private var apiKeyField = ""
     @State private var hasStoredKey = Keychain.hasStoredItem
@@ -146,6 +147,61 @@ struct SettingsView: View {
             }
 
             Section {
+                if let problem = registry.configProblem {
+                    Label(problem, systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.orange)
+                }
+
+                if !registry.hasConfig {
+                    Text("No connectors configured. Mac Clicker can use any MCP server — a filesystem server over your notes, or anything else you already run — so a skill can look something up while it answers.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    ForEach(registry.statuses) { status in
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            Image(systemName: status.state.symbol)
+                                .foregroundStyle(status.state.tint)
+                                .font(.system(size: 10))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(status.id).font(.system(size: 11.5, weight: .medium))
+                                Text(status.state.caption(toolCount: status.toolNames.count))
+                                    .font(.system(size: 10.5))
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            Spacer()
+                        }
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    if registry.hasConfig {
+                        Button("Edit config…") {
+                            NSWorkspace.shared.open(MCPRegistry.configURL)
+                        }
+                        .controlSize(.small)
+                    } else {
+                        Button("Create config…") {
+                            try? registry.createExampleConfig()
+                            NSWorkspace.shared.open(MCPRegistry.configURL)
+                        }
+                        .controlSize(.small)
+                    }
+                    Button("Reload") { Task { await registry.reload() } }
+                        .controlSize(.small)
+                    Spacer()
+                }
+            } header: {
+                Text("Connectors (MCP)")
+            } footer: {
+                Text("Tools that only read run as part of an answer. Anything that would change something is shown to you for approval first, every time.")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.secondary)
+            }
+
+            Section {
                 HStack(spacing: 6) {
                     Button("Check ring alignment") { onCheckAlignment() }
                         .controlSize(.small)
@@ -231,11 +287,39 @@ struct SettingsView: View {
     }
 }
 
+private extension MCPRegistry.State {
+    var symbol: String {
+        switch self {
+        case .ready: return "checkmark.circle.fill"
+        case .starting: return "clock"
+        case .disabled: return "circle.dashed"
+        case .failed: return "exclamationmark.triangle.fill"
+        }
+    }
+    var tint: Color {
+        switch self {
+        case .ready: return .green
+        case .starting: return .secondary
+        case .disabled: return .secondary
+        case .failed: return .orange
+        }
+    }
+    func caption(toolCount: Int) -> String {
+        switch self {
+        case .ready: return "\(toolCount) tool\(toolCount == 1 ? "" : "s")"
+        case .starting: return "starting…"
+        case .disabled: return "disabled in the config"
+        case .failed(let reason): return reason
+        }
+    }
+}
+
 @MainActor
 final class SettingsWindowController {
     private var window: NSWindow?
     var onHotKeysChanged: (() -> Void)?
     var onCheckAlignment: (() -> Void)?
+    var registry: MCPRegistry?
 
     func show() {
         if let window {
@@ -246,7 +330,8 @@ final class SettingsWindowController {
 
         let view = SettingsView(
             onHotKeysChanged: { [weak self] in self?.onHotKeysChanged?() },
-            onCheckAlignment: { [weak self] in self?.onCheckAlignment?() }
+            onCheckAlignment: { [weak self] in self?.onCheckAlignment?() },
+            registry: registry ?? MCPRegistry()
         )
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 470, height: 660),

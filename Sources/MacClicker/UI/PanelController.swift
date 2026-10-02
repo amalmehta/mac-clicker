@@ -16,8 +16,8 @@ final class PanelController: NSObject, NSWindowDelegate {
     private var panel: KeyPanel?
     private var escapeMonitor: Any?
 
-    override init() {
-        runner = TaskRunner(overlay: overlay)
+    init(registry: MCPRegistry) {
+        runner = TaskRunner(overlay: overlay, registry: registry)
         super.init()
     }
 

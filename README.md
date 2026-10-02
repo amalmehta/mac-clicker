@@ -64,6 +64,8 @@ The menu bar icon (⌖) has *Explain Selection*, *Settings…*, and *Quit*.
 | Presence | `Support/Presence.swift` | Mic-in-use via CoreAudio, as a proxy for "on a call". Gates every unprompted output. |
 | Voice | `Voice/Dictation.swift` | `SFSpeechRecognizer` with on-device recognition — speech never leaves the Mac, only the text. |
 | Suggestion backoff | `Sources/MacClickerKit/SuggestionPolicy.swift` | Decides whether an unprompted suggestion may appear. Kept free of AppKit so it is directly testable; 14 tests cover the rules. |
+| Connectors | `MCP/MCPClient.swift`, `MCP/MCPRegistry.swift` | Speaks MCP over stdio to servers you configure, and offers their tools to the model. |
+| Action risk | `Sources/MacClickerKit/ActionRisk.swift` | Decides which tool calls need your approval. |
 
 **Model configuration:** `claude-opus-5`, adaptive thinking, effort `low` by default
 (fast and strong for explain-style work; raise it in Settings). `fallbacks: "default"` is
@@ -135,6 +137,41 @@ The logic lives in `MacClickerKit` with no AppKit dependency, so `swift test` ex
 directly rather than leaving it to be found in the wild.
 
 ---
+
+## Connectors (MCP)
+
+Rather than hand-building a Gmail integration and a Notion integration and a Sheets
+integration, Mac Clicker speaks [MCP](https://modelcontextprotocol.io) and borrows the
+ecosystem. Settings → Connectors → **Create config…** writes
+`~/Library/Application Support/MacClicker/mcp.json` in the same shape Claude Desktop uses,
+so an existing config can be pasted straight in:
+
+```json
+{
+  "mcpServers": {
+    "notes": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/Users/you/Notes"]
+    }
+  }
+}
+```
+
+Those tools are offered to **Explain this**, **What's on screen**, and **Ask about this** —
+not to **Show me how**, where pointing accurately is the whole job and a pile of unrelated
+tools only gives it something else to do. With no config there are no tools, so this costs
+nothing until you set it up.
+
+**Approval.** Tools that only read run as part of an answer; being asked three times to
+approve a note lookup is how people learn to click Allow without reading. Anything that
+would change something is shown to you first, with the arguments it was actually called
+with, every time. The split is decided by `ActionRisk.swift` and is pinned by a test
+against the real tool list from `server-filesystem`: its ten readers run free, its
+`write_file`, `edit_file`, `create_directory` and `move_file` always ask.
+
+A GUI app inherits a bare `PATH`, not your shell's, so the client adds the usual Homebrew,
+`/usr/local/bin` and `~/.local/bin` locations before launching a server — otherwise `npx`
+is simply not found and the failure looks like nothing at all.
 
 ## Troubleshooting
 

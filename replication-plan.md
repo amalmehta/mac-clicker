@@ -338,7 +338,7 @@ polish and voice latency work that buys Mac Clicker nothing.
 | 3 | AX element inventory | 3–5 | Shared foundation for annotation *and* actuation |
 | 4 | AX-grounded annotation (2) | 8–12 | Their moat, currently withdrawn, and we can do it more accurately |
 | 5 | Push-to-talk voice (5) | 5–8 | On-device STT is free and private; skip the wake word |
-| 6 | MCP connectors (8) | 2–4 | Inherit an ecosystem instead of writing integrations |
+| 6 | MCP connectors (8) | 2–4 | **Done.** Inherit an ecosystem instead of writing integrations |
 | — | Notch, wake word, speech-to-speech parity | — | Skip; brand and latency, not capability |
 | — | Computer use | — | **Dropped.** Highest liability on the list, weakest payoff next to the four skills |
 | — | Agent loop, routines | 25–40 | Only if this becomes an agent product, which is a different product |

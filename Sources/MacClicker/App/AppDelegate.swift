@@ -5,7 +5,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private let mainHotKey = HotKeyManager()
     private let voiceHotKey = HotKeyManager()
-    private let panel = PanelController()
+    private let registry = MCPRegistry()
+    private lazy var panel = PanelController(registry: registry)
     private let settings = SettingsWindowController()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -18,6 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         reclaimKeychainIfSignatureChanged()
 
+        settings.registry = registry
+        // Servers start in the background: a config that fetches a package should
+        // not hold up the menu bar icon appearing.
+        Task { await registry.reload() }
+
         // First run: nothing works without a key and Accessibility access, so open
         // Settings rather than leaving a silent menu bar icon.
         if Keychain.readAPIKey() == nil || !AccessibilityPermission.isTrusted {
@@ -29,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         mainHotKey.unregister()
         voiceHotKey.unregister()
+        registry.shutdown()
     }
 
     /// The keychain item is readable only by the binary that created it. When the

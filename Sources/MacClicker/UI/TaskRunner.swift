@@ -40,15 +40,47 @@ final class TaskRunner: ObservableObject {
     @Published private(set) var suggestion: Skill?
 
     let dictation = Dictation()
+
+    /// A pending request for the user to approve something that would change the
+    /// world. The model's tool call is suspended until this resolves.
+    struct ConsentRequest: Identifiable, Equatable {
+        let id = UUID()
+        let summary: String
+        let detail: String
+    }
+
+    @Published private(set) var consent: ConsentRequest?
+    private var consentContinuation: CheckedContinuation<Bool, Never>?
+
     private let overlay: AnnotationOverlay
+    private let registry: MCPRegistry
     private var sourcePID: pid_t?
     private var elements: [AXElement] = []
     private var task: Task<Void, Never>?
     private var pending = ""
     private var lastFlush: CFTimeInterval = 0
 
-    init(overlay: AnnotationOverlay) {
+    init(overlay: AnnotationOverlay, registry: MCPRegistry) {
         self.overlay = overlay
+        self.registry = registry
+    }
+
+    // MARK: - Consent
+
+    /// Suspends a tool call until the user answers. Resolved exactly once: by a
+    /// button, or by the run being cancelled, which counts as no.
+    private func askConsent(summary: String, detail: String) async -> Bool {
+        await withCheckedContinuation { continuation in
+            consent = ConsentRequest(summary: summary, detail: detail)
+            consentContinuation = continuation
+        }
+    }
+
+    func resolveConsent(_ allowed: Bool) {
+        guard let continuation = consentContinuation else { return }
+        consentContinuation = nil
+        consent = nil
+        continuation.resume(returning: allowed)
     }
 
     var isStreaming: Bool { phase == .working || phase == .gathering }
@@ -160,10 +192,26 @@ final class TaskRunner: ObservableObject {
                 guard !Task.isCancelled else { return }
                 self.phase = .working
 
+                var tools: [String: AnthropicClient.Tool] = [:]
+                if skill.canPoint { tools[Self.pointToolName] = self.pointTool() }
+                if skill.usesConnectors {
+                    let connectorTools = self.registry.tools { summary, detail in
+                        await self.askConsent(summary: summary, detail: detail)
+                    }
+                    tools.merge(connectorTools) { existing, _ in existing }
+                }
+
+                // Only describe the connectors when there are some; a prompt that
+                // promises tools the model cannot see makes it apologise for their
+                // absence.
+                let system = tools.count > (skill.canPoint ? 1 : 0)
+                    ? skill.system + "\n" + Skill.connectorGuidance
+                    : skill.system
+
                 let result = try await AnthropicClient.run(
-                    system: skill.system,
+                    system: system,
                     content: content,
-                    tools: skill.canPoint ? [Self.pointToolName: self.pointTool()] : [:],
+                    tools: tools,
                     effort: Settings.effort,
                     onDelta: { [weak self] delta in self?.append(delta) }
                 )
@@ -211,6 +259,9 @@ final class TaskRunner: ObservableObject {
     }
 
     func cancel() {
+        // Anything waiting on approval must be released, or the run would hang on a
+        // continuation nobody can reach.
+        resolveConsent(false)
         task?.cancel()
         task = nil
     }

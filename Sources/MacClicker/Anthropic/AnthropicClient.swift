@@ -56,10 +56,12 @@ enum AnthropicClient {
     nonisolated static let model = "claude-opus-5"
     private static let endpoint = URL(string: "https://api.anthropic.com/v1/messages")!
 
-    /// A tool the model may call. `handler` runs locally and returns the result text.
+    /// A tool the model may call. `handler` runs locally and returns the result
+    /// text. It is async because some handlers have to wait for the user to approve
+    /// what is about to happen.
     struct Tool {
         let definition: [String: Any]
-        let handler: ([String: Any]) -> String
+        let handler: ([String: Any]) async -> String
     }
 
     /// Streams a response, running any tools the model calls and continuing until it
@@ -96,9 +98,13 @@ enum AnthropicClient {
 
             // All results from one assistant turn go back in a single user message;
             // splitting them teaches the model to stop calling tools in parallel.
-            let results: [[String: Any]] = turn.toolUses.map { use in
-                let output = tools[use.name]?.handler(use.input) ?? "No such tool: \(use.name)"
-                return ["type": "tool_result", "tool_use_id": use.id, "content": output]
+            var results: [[String: Any]] = []
+            for use in turn.toolUses {
+                let output = await tools[use.name]?.handler(use.input)
+                    ?? "No such tool: \(use.name)"
+                results.append([
+                    "type": "tool_result", "tool_use_id": use.id, "content": output
+                ])
             }
             messages.append(["role": "user", "content": results])
         }

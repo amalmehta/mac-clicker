@@ -98,6 +98,14 @@ struct PanelView: View {
                         .textSelection(.enabled)
                 }
 
+                if let request = runner.consent {
+                    ConsentCard(
+                        request: request,
+                        onAllow: { runner.resolveConsent(true) },
+                        onDeny: { runner.resolveConsent(false) }
+                    )
+                }
+
                 if let suggested = runner.suggestion {
                     SuggestionRow(
                         skill: suggested,
@@ -235,7 +243,12 @@ struct PanelView: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            if runner.isListening {
+            if runner.consent != nil {
+                Text("waiting for you")
+                    .font(.system(size: 10.5))
+                    .foregroundStyle(.orange)
+                Spacer()
+            } else if runner.isListening {
                 Text("return to send · esc to cancel")
                     .font(.system(size: 10.5))
                     .foregroundStyle(.secondary)
@@ -287,6 +300,53 @@ struct PanelView: View {
 enum PanelMetrics {
     static let width: CGFloat = 480
     static let height: CGFloat = 440
+}
+
+/// Asks before anything that would change the world outside this app.
+///
+/// Shown with the arguments the tool was actually called with, because approving
+/// "run write_file" without seeing the path is not approving anything.
+private struct ConsentCard: View {
+    let request: TaskRunner.ConsentRequest
+    var onAllow: () -> Void
+    var onDeny: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 7) {
+                Image(systemName: "hand.raised.fill")
+                    .foregroundStyle(.orange)
+                    .font(.system(size: 12))
+                Text(request.summary)
+                    .font(.system(size: 12.5, weight: .semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Text(request.detail)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(7)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 5))
+
+            HStack(spacing: 8) {
+                Spacer()
+                Button("Don't", action: onDeny)
+                    .controlSize(.small)
+                Button("Allow once", action: onAllow)
+                    .controlSize(.small)
+                    .keyboardShortcut(.defaultAction)
+            }
+        }
+        .padding(10)
+        .background(Color.orange.opacity(0.10), in: RoundedRectangle(cornerRadius: 8))
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.orange.opacity(0.35), lineWidth: 1)
+        )
+    }
 }
 
 /// Mentions a skill the user has never tried, once their answer has arrived.
